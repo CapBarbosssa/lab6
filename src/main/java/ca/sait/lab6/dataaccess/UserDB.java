@@ -89,7 +89,7 @@ public class UserDB {
         ConnectionPool cp = ConnectionPool.getInstance();
         Connection con = cp.getConnection();
         PreparedStatement ps = null;
-        String sql = "INSERT INTO `user`(`email`,`first_name`,`last_name`,`password`,`role`) VALUES (?,?,?,?,?,?);";
+        String sql = "INSERT INTO `user`(`email`,`first_name`,`last_name`,`password`,`role`) VALUES (?,?,?,?,?);";
         
         boolean inserted = false;
         try {
@@ -130,23 +130,27 @@ public class UserDB {
             DBUtil.closePreparedStatement(ps);
             cp.freeConnection(con);
         }
+        
         return updated;
     }
 
-    public void delete(User user) throws Exception {
+    public boolean delete(User user) throws Exception {
         ConnectionPool cp = ConnectionPool.getInstance();
         Connection con = cp.getConnection();
         PreparedStatement ps = null;
-        String sql = "DELETE FROM note WHERE note_id=?";
+        String sql = "DELETE FROM user WHERE email=?";
+        boolean deleted;
         
         try {
             ps = con.prepareStatement(sql);
-            ps.setInt(1, note.getNoteId());
-            ps.executeUpdate();
+            ps.setString(1, user.getEmail());
+            deleted = ps.executeUpdate() !=0;
         } finally {
             DBUtil.closePreparedStatement(ps);
             cp.freeConnection(con);
         }
+        return deleted;
+        
     }
 
 }
