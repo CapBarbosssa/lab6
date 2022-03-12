@@ -55,7 +55,7 @@ public class UserDB {
         Connection con = cp.getConnection();
         PreparedStatement ps = null;
         ResultSet rs = null;
-        String sql = "SELECT * FROM user WHERE email=?";
+        String sql = "SELECT * FROM user JOIN role ON role.role_id = user.role WHERE email=? LIMIT 1";
         
         try {
             ps = con.prepareStatement(sql);
@@ -63,10 +63,18 @@ public class UserDB {
             
             rs = ps.executeQuery();
             if (rs.next()) {
-                String title = rs.getString(2);
-                String contents = rs.getString(3);
-                String owner = rs.getString(4);
-                note = new Note(noteId, title, contents, owner);
+            
+                boolean active = rs.getBoolean("active");
+                String fname = rs.getString("fist_name");
+                String lname = rs.getString("last_name");
+                String pass = rs.getString("password");
+                int roleId = rs.getInt("role_id");
+                String roleName = rs.getString("role_name");
+                
+                Role role;
+                role = new Role(roleId,roleName);
+               
+                user = new User(email,active,fname,lname,pass,role);
             }
         } finally {
             DBUtil.closeResultSet(rs);
@@ -74,46 +82,58 @@ public class UserDB {
             cp.freeConnection(con);
         }
         
-        return note;
+        return user;
     }
 
-    public void insert(Note note) throws Exception {
+    public boolean insert(User user) throws Exception {
         ConnectionPool cp = ConnectionPool.getInstance();
         Connection con = cp.getConnection();
         PreparedStatement ps = null;
-        String sql = "INSERT INTO note (title, contents, owner) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO `user`(`email`,`first_name`,`last_name`,`password`,`role`) VALUES (?,?,?,?,?,?);";
         
+        boolean inserted = false;
         try {
             ps = con.prepareStatement(sql);
-            ps.setString(1, note.getTitle());
-            ps.setString(2, note.getContents());
-            ps.setString(3, note.getOwner());
-            ps.executeUpdate();
+            ps.setString(1, user.getEmail());
+            ps.setString(2, user.getFname());
+            ps.setString(3, user.getLname());
+            ps.setString(4, user.getPass());
+            ps.setInt(5,user.getRole().getId());
+            
+            inserted = ps.executeUpdate() !=0;
+        }
+                finally {
+            DBUtil.closePreparedStatement(ps);
+            cp.freeConnection(con);
+        }
+        
+        return inserted;
+    }
+
+    public boolean update(User user) throws Exception {
+        ConnectionPool cp = ConnectionPool.getInstance();
+        Connection con = cp.getConnection();
+        PreparedStatement ps = null;
+        String sql = "UPDATE user SET `first_name=?`,`last_name=?`,`password=?`,`role=?` WHERE `email =?`;";
+        boolean updated;
+        try {
+            ps = con.prepareStatement(sql);
+           
+            ps.setString(1, user.getFname());
+            ps.setString(2, user.getLname());
+            ps.setString(3, user.getPass());
+            ps.setInt(4,user.getRole().getId());
+            ps.setString(5, user.getEmail());
+            
+            updated = ps.executeUpdate() !=0;
         } finally {
             DBUtil.closePreparedStatement(ps);
             cp.freeConnection(con);
         }
+        return updated;
     }
 
-    public void update(Note note) throws Exception {
-        ConnectionPool cp = ConnectionPool.getInstance();
-        Connection con = cp.getConnection();
-        PreparedStatement ps = null;
-        String sql = "UPDATE note SET title=?, contents=? WHERE note_id=?";
-        
-        try {
-            ps = con.prepareStatement(sql);
-            ps.setString(1, note.getTitle());
-            ps.setString(2, note.getContents());
-            ps.setInt(3, note.getNoteId());
-            ps.executeUpdate();
-        } finally {
-            DBUtil.closePreparedStatement(ps);
-            cp.freeConnection(con);
-        }
-    }
-
-    public void delete(Note note) throws Exception {
+    public void delete(User user) throws Exception {
         ConnectionPool cp = ConnectionPool.getInstance();
         Connection con = cp.getConnection();
         PreparedStatement ps = null;
